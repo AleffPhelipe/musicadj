@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>DJ Music System</title>
+
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f2f2f2;
+      margin: 0;
+      padding: 0;
+    }
+
+    .container {
+      width: 90%;
+      max-width: 750px;
+      margin: 40px auto;
+      background: white;
+      padding: 25px;
+      border-radius: 8px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.15);
+    }
+
+    h1 {
+      text-align: center;
+      color: #222;
+    }
+
+    h2 {
+      margin-top: 30px;
+      color: #333;
+      border-bottom: 1px solid #ddd;
+      padding-bottom: 5px;
+    }
+
+    form {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    input {
+      padding: 10px;
+      font-size: 15px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+    }
+
+    button {
+      padding: 10px;
+      background: #222;
+      color: white;
+      border: none;
+      cursor: pointer;
+      border-radius: 4px;
+      font-size: 15px;
+    }
+
+    button:hover {
+      background: #444;
+    }
+
+    ul {
+      padding-left: 20px;
+    }
+
+    li {
+      margin-bottom: 8px;
+    }
+
+    .status {
+      margin-top: 20px;
+      padding: 10px;
+      background: #eee;
+      border-radius: 4px;
+      font-size: 14px;
+    }
+
+    .links {
+      margin-top: 20px;
+      text-align: center;
+    }
+
+    .links a {
+      color: #222;
+      font-weight: bold;
+      text-decoration: none;
+    }
+
+    .links a:hover {
+      text-decoration: underline;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <h1>DJ Music System</h1>
+
+    <h2>Registro</h2>
+    <form id="registerForm">
+      <input type="email" id="registerEmail" placeholder="Digite seu email" required>
+      <input type="password" id="registerPassword" placeholder="Digite sua senha" required>
+      <button type="submit">Registrar</button>
+    </form>
+
+    <h2>Login</h2>
+    <form id="loginForm">
+      <input type="email" id="loginEmail" placeholder="Digite seu email" required>
+      <input type="password" id="loginPassword" placeholder="Digite sua senha" required>
+      <button type="submit">Entrar</button>
+    </form>
+
+    <h2>Músicas</h2>
+    <button id="getMusicasBtn">Obter Músicas</button>
+    <ul id="musicasList"></ul>
+
+    <div class="status" id="status">
+      Status: aguardando ação do usuário.
+    </div>
+
+    <div class="links">
+      <p>
+        Documentação Swagger:
+        <a href="/apidocs" target="_blank">Abrir documentação</a>
+      </p>
+    </div>
+  </div>
+
+  <script>
+    function atualizarStatus(mensagem) {
+      document.getElementById("status").textContent = "Status: " + mensagem;
+    }
+
+    document.getElementById("registerForm").addEventListener("submit", async function(event) {
+      event.preventDefault();
+
+      const email = document.getElementById("registerEmail").value;
+      const password = document.getElementById("registerPassword").value;
+
+      try {
+        const response = await fetch("/register", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            email: email,
+            password: password
+          })
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+          alert("Usuário registrado com sucesso!");
+          atualizarStatus(data.message);
+        } else {
+          alert(data.message);
+          atualizarStatus(data.message);
+        }
+      } catch (error) {
+        alert("Erro ao registrar usuário.");
+        atualizarStatus("Erro ao registrar usuário.");
+      }
+    });
+
+    document.getElementById("loginForm").addEventListener("submit", async function(event) {
+      event.preventDefault();
+
+      const email = document.getElementById("loginEmail").value;
+      const password = document.getElementById("loginPassword").value;
+
+      try {
+        const response = await fetch("/login", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            email: email,
+            password: password
+          })
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+          localStorage.setItem("token", data.token);
+          alert("Login realizado com sucesso!");
+          atualizarStatus("Login realizado com sucesso. Token salvo no navegador.");
+        } else {
+          alert(data.message);
+          atualizarStatus(data.message);
+        }
+      } catch (error) {
+        alert("Erro ao realizar login.");
+        atualizarStatus("Erro ao realizar login.");
+      }
+    });
+
+    document.getElementById("getMusicasBtn").addEventListener("click", async function() {
+      const token = localStorage.getItem("token");
+
+      if (!token) {
+        alert("Faça login primeiro.");
+        atualizarStatus("Usuário tentou acessar músicas sem estar logado.");
+        return;
+      }
+
+      try {
+        const response = await fetch("/musicas", {
+          method: "GET",
+          headers: {
+            "Authorization": "Bearer " + token
+          }
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+          const musicasList = document.getElementById("musicasList");
+          musicasList.innerHTML = "";
+
+          data.forEach(function(musica) {
+            const li = document.createElement("li");
+            li.textContent = musica.titulo + " - " + musica.artista;
+            musicasList.appendChild(li);
+          });
+
+          atualizarStatus("Músicas carregadas com sucesso.");
+        } else {
+          alert(data.message || "Erro ao buscar músicas.");
+          atualizarStatus(data.message || "Erro ao buscar músicas.");
+        }
+      } catch (error) {
+        alert("Erro ao buscar músicas.");
+        atualizarStatus("Erro ao buscar músicas.");
+      }
+    });
+  </script>
+</body>
+</html>
